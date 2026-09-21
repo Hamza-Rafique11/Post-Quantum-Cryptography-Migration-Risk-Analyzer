@@ -1,20 +1,121 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+### Post-Quantum Cryptography Migration & Risk Analyzer
 
-# Run and deploy your AI Studio app
+Q-FORGE is a **Linux-native cybersecurity platform** for discovering cryptographic usage, assessing quantum-related risk, mapping cryptographic dependencies, and planning migration toward **Post-Quantum Cryptography (PQC)**.
 
-This contains everything you need to run your app locally.
+Built for **Kali Linux, Debian, Ubuntu, and other Linux environments**.
 
-View your app in AI Studio: https://ai.studio/apps/e48cdad3-7fe9-4479-969a-01814e974f5c
+---
 
-## Run Locally
+## Features
 
-**Prerequisites:**  Node.js
+* 🔍 **Cryptographic Discovery** — Detect cryptographic algorithms and APIs in source code.
+* 🔐 **Certificate Analysis** — Analyze X.509 certificates, keys, signatures, and validity.
+* 🌐 **TLS Analysis** — Inspect authorized TLS services and cryptographic configurations.
+* 📊 **Crypto Inventory** — Centralized inventory of discovered cryptographic assets.
+* ⚠️ **Quantum Risk Assessment** — Identify cryptographic mechanisms requiring migration consideration.
+* 🕸️ **Dependency Mapping** — Visualize relationships between assets, applications, services, and cryptography.
+* 🚀 **PQC Migration Planning** — Generate migration strategies and priorities.
+* 🧪 **Validation & Rescanning** — Compare cryptographic posture before and after changes.
+* 💻 **Linux CLI** — Perform scans directly from the terminal.
+* 📄 **Security Reports** — Generate structured analysis and migration reports.
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Architecture
+
+```text
+Source / Certificate / TLS
+           │
+           ▼
+   Cryptographic Scanner
+           │
+           ▼
+    Crypto Inventory
+           │
+           ▼
+     Risk Assessment
+           │
+           ▼
+   Dependency Analysis
+           │
+           ▼
+   PQC Migration Plan
+           │
+           ▼
+      Validation
+```
+
+---
+
+## Tech Stack
+
+**Backend:** Python, FastAPI, SQLite
+**Frontend:** React, TypeScript
+**Security Tools:** OpenSSL, Nmap, TShark, GnuTLS
+**Graph Analysis:** NetworkX
+**Optional AI:** Ollama / Local LLMs
+
+---
+
+## Linux CLI
+
+```bash
+qforge status
+
+qforge scan source ~/project
+
+qforge scan certificate certificate.pem
+
+qforge scan tls 127.0.0.1:8443
+
+qforge risk summary
+
+qforge migration plan
+
+qforge report generate
+```
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/yourusername/q-forge.git
+cd q-forge
+
+chmod +x scripts/install.sh
+./scripts/install.sh
+
+./scripts/start.sh
+```
+
+---
+
+## Security
+
+Q-FORGE follows a **local-first and least-privilege architecture**.
+
+* Authorized scanning only
+* Scope-controlled network analysis
+* Safe subprocess execution
+* No unnecessary root privileges
+* Sensitive-data redaction
+* Offline-capable core functionality
+
+---
+
+## Project Status
+
+**Active Development**
+
+Q-FORGE is being developed as a practical research and security engineering platform for **cryptographic inventory, quantum-risk analysis, and PQC migration planning**.
+
+---
+
+## License
+
+MIT License
+
+---
+
+> **Discover Cryptography. Assess Quantum Risk. Plan the Migration.**
