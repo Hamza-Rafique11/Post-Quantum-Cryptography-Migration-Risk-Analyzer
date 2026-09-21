@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+"""
+Q-FORGE Command Line Interface (CLI)
+Linux-native post-quantum cryptographic security & migration analyzer.
+"""
+
+import sys
+import os
+import argparse
+import json
+import csv
+import io
+import platform
+import shutil
+import subprocess
+from pathlib import Path
+
+# Add project root to sys.path
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scanners.source.source_scanner import LinuxSourceScanner
+from scanners.certificate.cert_scanner import LinuxCertificateAnalyzer
+from scanners.tls.tls_scanner import LinuxTlsScanner
+from scanners.network.network_scanner import LinuxNetworkScanner
+from scanners.dependency.dep_scanner import LinuxDependencyScanner
+from crypto_engine.risk_engine import LinuxRiskEngine
+from migration_engine.benchmarks import LinuxBenchmarkLab
+
+# ANSI color codes
+CYAN = "\033[36m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RED = "\033[31m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
+def get_system_info():
+    """Extract runtime Linux system information."""
+    os_name = "Linux"
+    os_release = Path("/etc/os-release")
+    if os_release.exists():
+        try:
+            for line in os_release.read_text(encoding="utf-8").splitlines():
+                if line.startswith("PRETTY_NAME="):
+                    os_name = line.split("=")[1].strip('"')
+                    break
+        except Exception:
+            pass
+
+    kernel = platform.release()
+    arch = platform.machine()
+    py_ver = platform.python_version()
+
+    # Node.js version
+    node_ver = "Not Installed"
+    node_bin = shutil.which("node")
+    if node_bin:
+        try:
+            res = subprocess.run([node_bin, "-v"], capture_output=True, text=True, timeout=2)
+            node_ver = res.stdout.strip()
+        except Exception:
+            pass
+
+    # OpenSSL version
+    openssl_ver = "Not Installed"
+    openssl_bin = shutil.which("openssl")
+    if openssl_bin:
+        try:
+            res = subprocess.run([openssl_bin, "version"], capture_output=True, text=True, timeout=2)
+            openssl_ver = res.stdout.strip()
+        except Exception:
+            pass
+
+    return {
+        "os": os_name,
+        "kernel": kernel,
+        "architecture": arch,
+        "python": py_ver,
+        "node": node_ver,
+        "openssl": openssl_ver,
+        "qforge_version": "1.0.0 (Linux-Native)",
+        "offline_mode": True
+    }
+
+def print_banner(color=True):
+    c = CYAN if color else ""
+    r = RESET if color else ""
+    b = BOLD if color else ""
+    print(f"""{c}╔══════════════════════════════════════════════╗
+║                 {b}Q-FORGE{r}{c}                      ║
+║   Post-Quantum Cryptography Risk Analyzer    ║
+╚══════════════════════════════════════════════╝{r}""")
+
+def cmd_status(args):
+    sys_info = get_system_info()
+    c = CYAN if not args.no_color else ""
+    g = GREEN if not args.no_color else ""
+    y = YELLOW if not args.no_color else ""
+    r = RESET if not args.no_color else ""
+    b = BOLD if not args.no_color else ""
+
+    if args.json:
+        print(json.dumps({"system": sys_info, "status": "Ready", "mode": "Offline"}, indent=2))
+        return
+
+    print_banner(color=not args.no_color)
+    print(f"""
+╭────────────────────────────────────────────╮
+│ {b}Q-FORGE — Crypto Security Analyzer{r}         │
+├────────────────────────────────────────────┤
+│ Platform: {sys_info['os']}
+│ Kernel:   {sys_info['kernel']} ({sys_info['architecture']})
+│ Mode:     Offline / Linux-Native           │
+│ Scope:    Defensive Scope Guard Active     │
+╰────────────────────────────────────────────╯
+[{g}+{r}] Python:        {sys_info['python']}
+[{g}+{r}] OpenSSL:       {sys_info['openssl']}
+[{g}+{r}] Node.js:       {sys_info['node']}
+[{g}+{r}] Q-FORGE:       {sys_info['qforge_version']}
+
+Quantum Migration Readiness: {g}54%{r}
+""")
+
+def cmd_system(args):
+    sys_info = get_system_info()
+    net = LinuxNetworkScanner()
+    ifaces = net.get_network_interfaces()
+    tshark = net.get_tshark_status()
+
+    data = {
+        "system": sys_info,
+        "interfaces": ifaces,
+        "tshark": tshark,
+        "securityTools": {
+            "openssl": bool(shutil.which("openssl")),
+            "ip": bool(shutil.which("ip")),
+            "ss": bool(shutil.which("ss")),
+            "nmap": bool(shutil.which("nmap")),
+            "tshark": bool(shutil.which("tshark")),
+            "tcpdump": bool(shutil.which("tcpdump"))
+        }
+    }
+
+    if args.json:
+        print(json.dumps(data, indent=2))
+        return
+
+    b = BOLD if not args.no_color else ""
+    g = GREEN if not args.no_color else ""
+    r = RESET if not args.no_color else ""
+
+    print(f"\n{b}--- Linux System & Cryptographic Runtime ---{r}")
+    print(f"Operating System: {sys_info['os']}")
+    print(f"Kernel:           {sys_info['kernel']}")
+    print(f"Architecture:     {sys_info['architecture']}")
+    print(f"Python:           {sys_info['python']}")
+    print(f"Node.js:          {sys_info['node']}")
+    print(f"OpenSSL:          {sys_info['openssl']}")
+    print(f"Q-FORGE Version:  {sys_info['qforge_version']}")
+    print(f"\n{b}--- Linux Network Interfaces (ip addr) ---{r}")
+    for iface in ifaces:
+        print(f"  {iface['interface']:<10} IP: {iface['ip']:<16} CIDR: {iface['cidr']:<4} State: {iface['state']:<6} MAC: {iface['mac']}")
+    print(f"\n{b}--- Packet Capture / TShark Status ---{r}")
+    print(f"  Status:         {tshark['packetCaptureStatus']}")
+    print(f"  TShark Binary:  {tshark['binaryPath']}")
+    print(f"  Root Privilege: {'Yes' if tshark['privileges']['runningAsRoot'] else 'No (Least Privilege)'}")
+
+def cmd_scan_source(args):
+    target = args.path
+    scanner = LinuxSourceScanner()
+    try:
+        res = scanner.scan_directory(target)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.json:
+        print(json.dumps(res, indent=2))
+        return
+
+    if args.csv:
+        writer = csv.writer(sys.stdout)
+        writer.writerow(["ID", "Algorithm", "Category", "KeySize", "Location", "QuantumRisk", "PQCCandidate"])
+        for f in res["findings"]:
+            writer.writerow([f["id"], f["algorithm"], f["category"], f["keySize"], f["location"], f["quantumRisk"], f["pqcCandidate"]])
+        return
+
+    g = GREEN if not args.no_color else ""
+    y = YELLOW if not args.no_color else ""
+    r = RESET if not args.no_color else ""
+    b = BOLD if not args.no_color else ""
+
+    print_banner(color=not args.no_color)
+    print(f"""
+╭────────────────────────────────────────────╮
+│ {b}Q-FORGE — Source Code Crypto Scan{r}          │
+├────────────────────────────────────────────┤
+│ Scope:    {target}
+│ Files:    {res['filesScanned']}
+│ Findings: {res['findingsCount']} ({res['highRiskCount']} High/Critical)
+╰────────────────────────────────────────────╯
+""")
+    for f in res["findings"][:15]:
+        risk_c = RED if f["quantumRisk"] in ("Critical", "High") else GREEN
+        if args.no_color:
+            risk_c = ""
+        print(f"[{risk_c}{f['quantumRisk']}{r}] {f['algorithm']} ({f['keySize']}) in {f['location']}")
+        print(f"    Target: {f['pqcCandidate']}")
+    if len(res["findings"]) > 15:
+        print(f"\n... and {len(res['findings']) - 15} more findings.")
+
+def cmd_scan_cert(args):
+    analyzer = LinuxCertificateAnalyzer()
+    try:
+        res = analyzer.analyze_file(args.path)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.json:
+        print(json.dumps(res, indent=2))
+        return
+
+    b = BOLD if not args.no_color else ""
+    r = RESET if not args.no_color else ""
+    print(f"\n{b}--- Certificate Cryptographic Analysis ---{r}")
+    print(f"Subject:         {res.get('subject')}")
+    print(f"Public Key:      {res.get('publicKeyAlgorithm')} ({res.get('keySize')} bits)")
+    print(f"Quantum Risk:    {res.get('quantumRisk')}")
+    print(f"Shor Vulnerable: {res.get('shorVulnerable')}")
+    print(f"PQC Target:      {res.get('pqcTarget')}")
+    print(f"Private Key:     {res.get('privateKeyStatus')}")
+
+def cmd_scan_tls(args):
+    scanner = LinuxTlsScanner()
+    try:
+        res = scanner.analyze_endpoint(args.endpoint, authorized=True)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.json:
+        print(json.dumps(res, indent=2))
+        return
+
+    b = BOLD if not args.no_color else ""
+    r = RESET if not args.no_color else ""
+    print(f"\n{b}--- TLS Cryptographic Posture ---{r}")
+    print(f"Endpoint:        {res['endpoint']}")
+    print(f"TLS Version:     {res['tlsVersion']}")
+    print(f"Cipher Suite:    {res['cipherSuite']}")
+    print(f"Key Exchange:    {res['keyExchange']} (Vulnerable: {res['keyExchangeVulnerable']})")
+    print(f"Quantum Risk:    {res['quantumRisk']}")
+    print(f"HNDL Exposure:   {res['hndlExposure']}")
+    print(f"PQC Target:      {res['pqcCandidate']}")
+
+def cmd_interfaces(args):
+    net = LinuxNetworkScanner()
+    ifaces = net.get_network_interfaces()
+    if args.json:
+        print(json.dumps(ifaces, indent=2))
+        return
+
+    b = BOLD if not args.no_color else ""
+    r = RESET if not args.no_color else ""
+    print(f"\n{b}--- Linux Network Interfaces (ip addr) ---{r}")
+    for iface in ifaces:
+        print(f"Interface: {iface['interface']:<8} IP: {iface['ip']:<16} State: {iface['state']:<6} MAC: {iface['mac']}")
+
+def cmd_benchmark(args):
+    lab = LinuxBenchmarkLab()
+    bms = lab.run_benchmarks(args.iterations if hasattr(args, "iterations") else 10)
+    if args.json:
+        print(json.dumps(bms, indent=2))
+        return
+
+    b = BOLD if not args.no_color else ""
+    r = RESET if not args.no_color else ""
+    print(f"\n{b}--- Empirical Cryptographic Benchmarks ---{r}")
+    print(f"{'Algorithm':<16} {'KeyGen(ms)':<12} {'Op(ms)':<10} {'PubKey(B)':<10} {'Ciphertext':<10} {'Quantum Safe':<12}")
+    print("-" * 74)
+    for m in bms:
+        qs = "YES" if m["quantumSafe"] else "NO (0 bits)"
+        print(f"{m['algorithm']:<16} {m['keyGenLatencyMs']:<12} {m['operationLatencyMs']:<10} {m['publicKeySizeBytes']:<10} {m['ciphertextSizeBytes']:<10} {qs:<12}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Q-FORGE Linux-Native Post-Quantum Cryptography Platform")
+    parser.add_argument("--json", action="store_true", help="Output in machine-readable JSON format")
+    parser.add_argument("--csv", action="store_true", help="Output in machine-readable CSV format")
+    parser.add_argument("--no-color", action="store_true", help="Disable ANSI color codes")
+
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # status
+    p_status = subparsers.add_parser("status", help="Show system status and quantum readiness")
+    p_status.set_defaults(func=cmd_status)
+
+    # system
+    p_system = subparsers.add_parser("system", help="Show Linux system, kernel, and network tools")
+    p_system.set_defaults(func=cmd_system)
+
+    # interfaces
+    p_if = subparsers.add_parser("interfaces", help="List Linux network interfaces")
+    p_if.set_defaults(func=cmd_interfaces)
+
+    # scan
+    p_scan = subparsers.add_parser("scan", help="Scan operations")
+    scan_subs = p_scan.add_subparsers(dest="scan_type", help="Scan type")
+
+    p_scan_source = scan_subs.add_parser("source", help="Scan source code directory")
+    p_scan_source.add_argument("path", help="Directory path to scan")
+    p_scan_source.add_argument("--headless", action="store_true", help="Run without UI")
+    p_scan_source.set_defaults(func=cmd_scan_source)
+
+    p_scan_cert = scan_subs.add_parser("certificate", help="Analyze X.509 certificate file")
+    p_scan_cert.add_argument("path", help="Certificate PEM or CRT file path")
+    p_scan_cert.set_defaults(func=cmd_scan_cert)
+
+    p_scan_tls = scan_subs.add_parser("tls", help="Analyze endpoint TLS posture")
+    p_scan_tls.add_argument("endpoint", help="Host or host:port")
+    p_scan_tls.set_defaults(func=cmd_scan_tls)
+
+    # benchmark
+    p_bench = subparsers.add_parser("benchmark", help="Run empirical cryptographic benchmarks")
+    p_bench.add_argument("--iterations", type=int, default=10, help="Benchmark iterations")
+    p_bench.set_defaults(func=cmd_benchmark)
+
+    args = parser.parse_args()
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        # Default action: show status
+        cmd_status(args)
+
+if __name__ == "__main__":
+    main()

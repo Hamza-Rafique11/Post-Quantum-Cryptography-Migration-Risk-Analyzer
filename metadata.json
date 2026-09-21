@@ -1,0 +1,6 @@
+{
+  "name": "Q-Forge — Post-Quantum Cryptography Migration & Risk Analyzer",
+  "description": "Enterprise cryptographic discovery, quantum threat assessment, HNDL modeling, and post-quantum migration planning platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

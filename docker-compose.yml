@@ -1,0 +1,18 @@
+services:
+  qforge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qforge
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "8000:8000"
+    volumes:
+      - ./data:/opt/q-forge/data
+      - ./logs:/opt/q-forge/logs
+      - ./reports:/opt/q-forge/reports
+    environment:
+      - NODE_ENV=production
+      - PYTHONUNBUFFERED=1
+      - OFFLINE_MODE=true
