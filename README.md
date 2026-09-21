@@ -80,7 +80,7 @@ qforge report generate
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/q-forge.git
+git clone https://github.com/Hamza-Rafique11/q-forge.git
 cd q-forge
 
 chmod +x scripts/install.sh
